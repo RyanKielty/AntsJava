@@ -1,11 +1,13 @@
 package com.theironyard;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -35,13 +37,26 @@ public class Main extends Application {
     }
 
     Ant moveAnt(Ant ant) {
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         ant.x += randomStep();
         ant.y += randomStep();
         return ant;
     }
 
+    long lastTimestamp = 0;
+
+    int fps(long now) {
+        double diff = now - lastTimestamp;
+        double diffSeconds = diff/1000000000;
+        return (int) (1/diffSeconds);
+    }
+
     void moveAnts() {
-        ants = ants.stream()
+        ants = ants.parallelStream()
                 .map(this::moveAnt)
                 .collect(Collectors.toCollection(ArrayList<Ant>::new));
     }
@@ -67,7 +82,19 @@ public class Main extends Application {
         GraphicsContext context = canvasObject.getGraphicsContext2D();
 
         ants = createAnts();
-        drawAnts(context);
+
+        Label fpsLabel = (Label) scene.lookup("#fps");
+
+        AnimationTimer timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                moveAnts();
+                drawAnts(context);
+                fpsLabel.setText(fps(now) + "");
+                lastTimestamp = now;
+            }
+        };
+        timer.start();
     }
 
     public static void main(String[] args) {
